@@ -10,9 +10,6 @@ import { Component, Input } from '@angular/core';
 export class CardFooter {  
 @Input() modelResults: any[] = [];
 
-model1Image: string | null = null;
-model2Image: string | null = null;
-
 getAlertClass(value: string): string {
   if (value == "Rejected") return 'alert-danger';   // Red
   return 'alert-success';                           // Green

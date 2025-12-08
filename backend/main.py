@@ -12,7 +12,6 @@ from sklearn.ensemble import RandomForestClassifier
 
 app = FastAPI()
 
-# Allow frontend access (adjust port if needed)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:4200"], 
@@ -25,7 +24,6 @@ app.add_middleware(
 def root():
     return {"message": "FastAPI backend is running"}
 
-# Define the loan model
 class Loan(BaseModel):
     person_age: int
     person_income: float
@@ -40,7 +38,6 @@ class Loan(BaseModel):
     credhistlength: int
 
 def covertFormData(loan: Loan, columns, type):
-    # Model Prediction
     person_age = loan.person_age
     person_income = loan.person_income
     person_emp_length = loan.person_emplength
@@ -61,8 +58,6 @@ def covertFormData(loan: Loan, columns, type):
         person_home_ownership_MORTGAGE = 1
     elif loan.person_homeownership == 'OTHER':
         person_home_ownership_OTHER = 1
-
-    
 
     loan_intent_DEBTCONSOLIDATION = 0
     loan_intent_EDUCATION = 0
@@ -104,7 +99,6 @@ def covertFormData(loan: Loan, columns, type):
         loan_grade_F = 1
     elif loan.loan_grade == 'G':
         loan_grade_G = 1
-
 
     cb_person_default_on_file_N = 0
     cb_person_default_on_file_Y = 0
@@ -174,7 +168,7 @@ def covertFormData(loan: Loan, columns, type):
         ]], columns=columns)
 
 
-# Global variables for model and scaler
+# Global variables for models and scaler
 linear_model = None
 forest_model = None
 scaler = None
@@ -188,7 +182,7 @@ def train_linear_model():
     scaler = StandardScaler()
     X_scaled = scaler.fit_transform(X)
 
-    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.3)
+    X_train, X_test, y_train, y_test = train_test_split(X_scaled, y, test_size=0.2, random_state=42)
 
     # Train logistic regression model
     linear_model = LogisticRegression(solver="saga", max_iter=2000)
@@ -225,11 +219,8 @@ def train_forest_model():
                       'loan_grade_G',], axis=1)
     crdata = crdata.drop('cb_person_default_on_file_Y', axis=1)
     
-    # Set up basic model data
-    # Use all features
     Xb = crdata.drop('loan_status', axis=1)
 
-    # Assuming only 'loan_status' is the target variable
     yb = crdata['loan_status']
 
     Xb_train, Xb_test, yb_train, yb_test = train_test_split(
@@ -238,11 +229,9 @@ def train_forest_model():
         test_size=0.2,
         random_state=42)
 
-    # Run model, don't need to scale for forest classifiers
     forest_model = RandomForestClassifier(random_state=42)
     forest_model.fit(Xb_train, yb_train)
 
-    # Check results
     yb_pred = forest_model.predict(Xb_test)
     baccuracy = accuracy_score(yb_test, yb_pred)
     print(f"Accuracy: {baccuracy}")
@@ -282,8 +271,8 @@ def predict_forest_model(loan: Loan):
     global forest_model, scaler, forest_columns, forest_accuracy
 
     # If model/scaler not loaded for some reason, train again
-    if forest_model is None or scaler is None or forest_columns is None:
-        forest_model, scaler, forest_columns, forest_accuracy = train_linear_model()
+    if forest_model is None or forest_columns is None:
+        forest_model, forest_columns, forest_accuracy = train_forest_model()
 
     # Accuracy
     accuracy = forest_accuracy
